@@ -111,7 +111,7 @@ All of the following steps have to be confirmed with "Enter".
 3. Choose the attribute you want to adjust.
 4. Depending on the attribute **enter or choose the new value**.
 
-**Filter**
+**Analyse**
 
 In the main menu, navigate to **"Analyse habits"** and choose the analysis you want to see.
 - For **All habits with the same periodicity** choose the periodicity you want to see.
@@ -119,10 +119,27 @@ In the main menu, navigate to **"Analyse habits"** and choose the analysis you w
 - For **Longest run streak for a given habit** and **Longest active streaks**  enter the ID of the habit you want to see.
 - For **All currently tracked habits, Most interruptions since creation (Top 3), Most checks since creation (Top 3), Longest expired (Top 3)** and **Group by category** No more action is needed.
 
+**Save and Load**
+
+The habits are **saved** when the program is exited via “Save and Exit” and after every important change that is made to the habits. For example, when a new habit is added or an existing habit is checked.
+
+Existing habits are automatically **loaded** from the “habits.json” file when the program is started. The file is created when the application is started for the first time.
+
+
 ## Tests
 To run tests, `pytest` must be installed. If it is not installed, it can be done by using:
 ```shell
-pytest .
+pip install pytest
+```
+Open the Terminal by using `cmd` and navigate to the folder of Habit Tracker by usinf `cd`. 
+
+Example:
+```shell
+cd C:\Users\Username\Documents\HabitTracker
+```
+To run the tests, enter 
+```shell
+pytest test_project.py
 ```
 
 ## Code Structure
@@ -131,9 +148,9 @@ pytest .
 - **`display.py`** Functions to display and filter habits using tabulate.
 - **`analyse.py`** Functions to analyze habits and provide detailed statistics.
 - **`store.py`** Functions to load and save habits data.
-- **`test.py`** Tests all key functions of the Habit Tracker.
+- **`test_project.py`** Tests all key functions of the Habit Tracker.
 
 ## Current Version
-10/12/2024
+12/12/2024
 
-*All bugs found can be kept for free and will be fixed with the Season Pass.*
+*All bugs found can be kept for free.*
