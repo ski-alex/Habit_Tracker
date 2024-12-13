@@ -40,6 +40,8 @@ Navigation is exclusively via the Comand Line interface. The up and down arrow k
 
 **Main Menu**
 
+*Please note: The Habit Tracker comes with no data. If you want to use Dummy Habits to explore all features instantly, you have to rename the file `habits_dummy.json` to `habits.json` and start the tracker afterwards.*
+
 Right after the start, the main menu is displayed. If you already have tracked habits, all active and broken ones are shown, too.
 
 - **Quick Check:** Check the status of a specific habit.
