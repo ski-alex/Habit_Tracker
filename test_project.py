@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 import json
 import os
-import pytest
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from analyse import Analyse
-from manage import Habit, period_mapping
+import manage
+from manage import Habit
 from store import HabitsStore
 from display import display_habits, filter_habits
 
@@ -17,32 +19,51 @@ def create_test_file(file_path):
     
     The function generates sample habit data for testing purposes, including all Habit attributes.
     The generated data is written to a JSON file specified by the file_path parameter. 
+        ID 1: Active / Daily / No Issues.
+        ID 2: Active / Every two days / No Issues.
+        ID 3: Established / Weekly / No Issues.
+        ID 4: Broken / Every two days / Interruption.
+        ID 5: Broken / Daily / Interruption.
     """
     now = datetime.now()
-    test_data = [
-        {"id": 1, "name": "Exercise", "category": "Health", "period": 1, "target": 10, "streak": 7, "streak_max": 7, 
-         "date_create": (now - timedelta(days=10)).strftime("%Y-%m-%d"), 
-         "date_check": [(now - timedelta(days=i)).strftime("%Y-%m-%d %H:%M:%S") for i in range(1, 8)], 
-         "deadline": (now - timedelta(days=1)).strftime("%Y-%m-%d"), "status": "Active", "date_interruptions": []},
-        {"id": 2, "name": "Read Book", "category": "Education", "period": 2, "target": 5, "streak": 5, "streak_max": 5, 
-         "date_create": (now - timedelta(days=15)).strftime("%Y-%m-%d"), 
-         "date_check": [(now - timedelta(days=i*2)).strftime("%Y-%m-%d %H:%M:%S") for i in range(1, 6)], 
-         "deadline": now.strftime("%Y-%m-%d"), "status": "Active", "date_interruptions": []},
-        {"id": 3, "name": "Meditation", "category": "Wellness", "period": 7, "target": 8, "streak": 3, "streak_max": 4, 
-         "date_create": (now - timedelta(days=20)).strftime("%Y-%m-%d"), 
-         "date_check": [(now - timedelta(days=i*7)).strftime("%Y-%m-%d %H:%M:%S") for i in range(1, 4)], 
-         "deadline": (now + timedelta(days=1)).strftime("%Y-%m-%d"), "status": "Active", "date_interruptions": []},
+    four_weeks_ago = now - timedelta(days=28)
+
+    TEST_DATA = [
+        {"id": 1, "name": "Exercise", "category": "Health", "period": 1, "target": 28, "streak": 27, "streak_max": 27, 
+         "date_create": four_weeks_ago.strftime("%Y-%m-%d"), 
+         "date_check": [(four_weeks_ago + timedelta(days=i)).strftime("%Y-%m-%d %H:%M:%S") for i in range(0, 27)], 
+         "deadline": (four_weeks_ago + timedelta(days=28)).strftime("%Y-%m-%d"), "status": "Active", 
+         "date_interruptions": []},
+
+        {"id": 2, "name": "Read Book", "category": "Education", "period": 2, "target": 28, "streak": 14, "streak_max": 14, 
+         "date_create": four_weeks_ago.strftime("%Y-%m-%d"), 
+         "date_check": [(four_weeks_ago + timedelta(days=i*2)).strftime("%Y-%m-%d %H:%M:%S") for i in range(0, 14)], 
+         "deadline": (four_weeks_ago + timedelta(days=(14 * 2))).strftime("%Y-%m-%d"), "status": "Active", 
+         "date_interruptions": []},
+
+        {"id": 3, "name": "Meditation", "category": "Wellness", "period": 7, "target": 4, "streak": 4, "streak_max": 4, 
+         "date_create": four_weeks_ago.strftime("%Y-%m-%d"), 
+         "date_check": [(four_weeks_ago + timedelta(days=i*7)).strftime("%Y-%m-%d %H:%M:%S") for i in range(0, 4)], 
+         "deadline": (four_weeks_ago + timedelta(days=3*7)).strftime("%Y-%m-%d"), "status": "Established", 
+         "date_interruptions": []},
+
         {"id": 4, "name": "Cooking", "category": "Lifestyle", "period": 2, "target": 6, "streak": 2, "streak_max": 2, 
-         "date_create": (now - timedelta(days=5)).strftime("%Y-%m-%d"), 
-         "date_check": [(now - timedelta(days=i*2)).strftime("%Y-%m-%d %H:%M:%S") for i in range(1, 3)], 
-         "deadline": (now + timedelta(days=2)).strftime("%Y-%m-%d"), "status": "Active", "date_interruptions": []},
+         "date_create": four_weeks_ago.strftime("%Y-%m-%d"), 
+         "date_check": [(four_weeks_ago + timedelta(days=i*2)).strftime("%Y-%m-%d %H:%M:%S") for i in range(0, 2)], 
+         "deadline": (four_weeks_ago + timedelta(days=(2 * 2))).strftime("%Y-%m-%d"), "status": "Broken", 
+         "date_interruptions": [(four_weeks_ago + timedelta(days=(2 * 2) + 2)).strftime("%Y-%m-%d")]},
+
         {"id": 5, "name": "Yoga", "category": "Fitness", "period": 1, "target": 7, "streak": 3, "streak_max": 3, 
-         "date_create": (now - timedelta(days=6)).strftime("%Y-%m-%d"), 
-         "date_check": [(now - timedelta(days=i)).strftime("%Y-%m-%d %H:%M:%S") for i in range(1, 4)], 
-         "deadline": (now + timedelta(days=3)).strftime("%Y-%m-%d"), "status": "Active", "date_interruptions": []}
-    ] 
-    with open(file_path, 'w') as file: 
-        json.dump(test_data, file, indent=4)
+         "date_create": four_weeks_ago.strftime("%Y-%m-%d"), 
+         "date_check": [(four_weeks_ago + timedelta(days=i)).strftime("%Y-%m-%d %H:%M:%S") for i in range(0, 3)], 
+         "deadline": (four_weeks_ago + timedelta(days=3)).strftime("%Y-%m-%d"), "status": "Active", 
+         "date_interruptions": [(four_weeks_ago + timedelta(days=3)).strftime("%Y-%m-%d")]}
+    ]
+
+    with open(file_path, 'w') as file:
+        json.dump(TEST_DATA, file, indent=4)
+
+
    
 @pytest.fixture
 def sample_habits():
@@ -115,24 +136,19 @@ def test_update_habit_status(sample_habits):
     if the streaks and interruptions are correctly updated.
     """
     habit1 = sample_habits[0]
-    habit2 = sample_habits[1]
-    habit3 = sample_habits[2]
+    habit5 = sample_habits[4]
 
     Habit.update(sample_habits)
 
     now = datetime.now().strftime("%Y-%m-%d")
 
-    assert habit1.status == "Broken"
-    assert habit1.streak == 0
-    assert now in habit1.date_interruptions
+    assert habit1.status == "Active"
+    assert habit1.streak == 27
+    assert now not in habit1.date_interruptions
 
-    assert habit2.status == "Active"
-    assert habit2.streak == 5
-    assert now not in habit2.date_interruptions
-
-    assert habit3.status == "Active"
-    assert habit3.streak == 3
-    assert now not in habit3.date_interruptions
+    assert habit5.status == "Broken"
+    assert habit5.streak == 0
+    assert now in habit5.date_interruptions
 
 @patch('questionary.text')
 @patch('questionary.select')
@@ -157,7 +173,7 @@ def test_add_habit(mock_confirm, mock_select, mock_text, sample_habits):
     assert len(sample_habits) == initial_count + 1
     assert sample_habits[-1].name == "New Habit Name"
     assert sample_habits[-1].category == "Health"
-    assert sample_habits[-1].period == period_mapping["Daily"]
+    assert sample_habits[-1].period == manage.PERIOD_MAPPING["Daily"]
     assert sample_habits[-1].target == 5
 
 @patch('questionary.text')
@@ -184,7 +200,6 @@ def test_adjust_habit(mock_confirm, mock_select, mock_text, sample_habits):
 
     assert habit_to_adjust.name != initial_name
     assert habit_to_adjust.name == "Adjusted Name"
-
 
 @patch('questionary.confirm')
 @patch('questionary.text')
@@ -278,6 +293,7 @@ def test_duplicate_habit(mock_text, sample_habits):
     assert sample_habits[-1].category == habit_to_duplicate.category
     assert sample_habits[-1].period == habit_to_duplicate.period
     assert sample_habits[-1].target == habit_to_duplicate.target
+
 
 @patch('tabulate.tabulate', return_value="Mocked Table")
 @patch('questionary.select')
@@ -393,7 +409,7 @@ def test_display_habits(mock_print, sample_habits):
     The function calls display_habits with specified parameters to display habits
     and asserts that the printed output contains the expected table headers and habit names.
     """
-    display_habits(sample_habits, status_request="Broken", length="full", filter_period=[1, 2, 7])
+    display_habits(sample_habits, status_request=None, length="full", filter_period=[1, 2, 7], headline="")
     mock_print.assert_called()
     output = mock_print.call_args[0][0]
     assert "ID" in output

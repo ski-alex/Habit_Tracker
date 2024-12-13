@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
+
 from tabulate import tabulate
 
 import manage
 from manage import Habit
 import questionary
 
-def display_habits(habits, status_request, length, filter_period):
+def display_habits(habits, status_request, length, filter_period, headline):
     """ 
     Displays habits in a formatted table. 
     
@@ -28,7 +29,7 @@ def display_habits(habits, status_request, length, filter_period):
     for habit in habits:
         latest_check_date = max(habit.date_check, default="N/A")
         no_interruptions = len(habit.date_interruptions)
-        period_word = manage.period_mapping[habit.period]
+        period_word = manage.PERIOD_MAPPING[habit.period]
 
         if habit.status != status_request and habit.period in filter_period:
             
@@ -37,7 +38,7 @@ def display_habits(habits, status_request, length, filter_period):
                 row = [habit.id, habit.name, habit.category, period_word, habit.target, habit.streak, latest_check_date, habit.deadline, habit.status]
          
             table_data.append(row)
-
+    print(f"\n{headline}")
     print(tabulate(table_data, headers=header, tablefmt="github"))
 
 def enter_filter (choices, attribute):
@@ -45,7 +46,7 @@ def enter_filter (choices, attribute):
     Prompts user to select filter values for a specified attribute. 
     
     Parameters: 
-    choices (list): A list of choices to filter by. 
+    choices (list): A list of choices to filter by depending on attribute to filter.
     attribute (str): The attribute to filter. 
     
     Returns: 
@@ -124,14 +125,14 @@ def filter_habits(habits):
         print(f"Here are the results for all habits with a name containing {value}:")
 
     elif attribute == "status":
-        value = enter_filter (choices=manage.status_list, attribute = attribute)
+        value = enter_filter (choices=manage.STATUS_LIST, attribute = attribute)
 
     elif attribute == "category":
-        value = enter_filter (choices=manage.categories, attribute = attribute)
+        value = enter_filter (choices=manage.CATEGORIES, attribute = attribute)
 
     elif attribute == "period":
-        value = enter_filter (choices=manage.periods, attribute = attribute)
-        value = [manage.period_mapping[p] for p in value]
+        value = enter_filter (choices=manage.PERIODS, attribute = attribute)
+        value = [manage.PERIOD_MAPPING[p] for p in value]
 
     elif attribute in ["created on", "deadline"]:
         wording = attribute 
@@ -176,7 +177,7 @@ def filter_habits(habits):
         if match: 
             latest_check_date = max(habit.date_check, default="N/A")
             no_interruptions = len(habit.date_interruptions)
-            period_word = manage.period_mapping[habit.period]
+            period_word = manage.PERIOD_MAPPING[habit.period]
             
             row = [habit.id, habit.name, habit.category, period_word, habit.target, habit.streak, habit.streak_max, habit.date_create, latest_check_date, habit.deadline, habit.status, no_interruptions]
             table_data.append(row)

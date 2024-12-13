@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
+
 import questionary
 
-categories = ["Health", "Lifestyle", "Sport", "Education", "Other"]
-periods = ["Daily", "Every two days", "Weekly"]
-status_list = ["Active", "Broken", "Established"]
-period_mapping = {"Daily": 1, "Every two days": 2, "Weekly": 7, 1:"Daily", 2:"Every two days", 7:"Weekly"}
+CATEGORIES = ["Health", "Lifestyle", "Sport", "Education", "Other"]
+PERIODS = ["Daily", "Every two days", "Weekly"]
+STATUS_LIST = ["Active", "Broken", "Established"]
+PERIOD_MAPPING = {"Daily": 1, "Every two days": 2, "Weekly": 7, 1:"Daily", 2:"Every two days", 7:"Weekly"}
 
 class Habit:
     def __init__(self, id, name, category, period, target, streak=0, streak_max=0, date_create=None, date_check=None, deadline=None, status="Active", date_interruptions=None): 
@@ -54,7 +55,7 @@ class Habit:
     
         new_habit = cls(id, name, category, int(period), target) 
 
-        period_word = period_mapping[period].lower()
+        period_word = PERIOD_MAPPING[period].lower()
         confirmation = questionary.confirm(f"\nDo you want to add '{name}' in {category} and repeat it {period_word} for {target} times?").ask() 
         if confirmation:
             habits.append(new_habit) 
@@ -63,30 +64,29 @@ class Habit:
     @classmethod
     def adjust(cls, habits):
         """ 
-        Adjusts the attributes of an existing habit.
-        
+        Adjusts attributes selected by the user, 
+        as well as attributes influenced by the attribute selected by the user.
+
         Parameters: 
         habits (list): The list of current habits. 
         """
         if cls.check_habits_exist(habits):
             return
-        
+
         habit_id = cls.check_id_exists(habits, occasion_name="adjust")
         if habit_id is None:
             return
 
         habit_to_adjust = next((habit for habit in habits if habit.id == habit_id), None)
-        
+
         if habit_to_adjust.status == "Established":
             print(f"\nThis habit is already established. If you want to re-establish this habit, you can use the “Duplicate” function.")
             return
-        
+
         choice = questionary.select(
             "Which attribute do you want to adjust?",
             choices=["Name", "Category", "Period", "Target"]
         ).ask().lower()
-
-        habit_to_adjust = next((habit for habit in habits if habit.id == habit_id), None)
 
         if choice == "name":
             new_value = cls.enter_name()
@@ -94,17 +94,20 @@ class Habit:
             new_value = cls.enter_category()
         elif choice == "period":
             new_value = cls.enter_period()
+            habit_to_adjust.deadline = (datetime.now() + timedelta(days=new_value)).strftime("%Y-%m-%d")
         elif choice == "target": 
-            print (f"\nThe new target must be greater than the current streak of {habit_to_adjust.streak}.")
+            print(f"\nThe new target must be greater than the current streak of {habit_to_adjust.streak}.")
             while True: 
                 new_value = cls.enter_valid_target() 
                 if new_value > habit_to_adjust.streak: 
                     break 
-                else: print(f"\nInvalid input. The new target must be greater than the current streak of {habit_to_adjust.streak}.")
-    
+                else:
+                    print(f"\nInvalid input. The new target must be greater than the current streak of {habit_to_adjust.streak}.")
+
         if habit_to_adjust:
             setattr(habit_to_adjust, choice, new_value)
             print(f"\nHabit no. {habit_id} has been adjusted. The new value for {choice} is now {new_value}.")
+
 
     @classmethod
     def check(cls, habits):
@@ -131,13 +134,12 @@ class Habit:
             else:
                 habit_to_check.streak += 1
                 habit_to_check.streak_max = max(habit_to_check.streak_max, habit_to_check.streak)
-                habit_to_check.date_check.append(datetime.now().strftime("%Y-%m-%d"))
+                habit_to_check.date_check.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 habit_to_check.deadline = (datetime.now() + timedelta(days=habit_to_check.period)).strftime("%Y-%m-%d")
                 
                 if habit_to_check.streak == habit_to_check.target:
                     habit_to_check.status = "Established"  # Broken and Active are handled in UPDATE
                     print(f"\nYou have established this habit. Congratulations!")
-
                 else:
                     print(f"{habit_to_check.name} has been checked. The next due date is {habit_to_check.deadline}.")
 
@@ -194,6 +196,7 @@ class Habit:
     def update(cls, habits):
         """ 
         Updates the status and streaks of all habits in the list.
+        Is called once, the programm is started.
         
         Parameters: 
         habits (list): The list of current habits. 
@@ -208,12 +211,14 @@ class Habit:
                     if len(habit.date_interruptions) == 0 or max(habit.date_interruptions) != now:
                         habit.date_interruptions.append(datetime.now().strftime("%Y-%m-%d"))
                 else:
-                    habit.status = "Active" 
+                    habit.status = "Active"
+                    habit.deadline = (datetime.now() + timedelta(days=habit.period)).strftime("%Y-%m-%d") 
 
     @staticmethod
     def get_id(habits):
         """ 
-        Gets a new unique ID for a habit. 
+        Gets a new unique ID for a habit. Was added to ensure no double IDs.
+        Checks the greatest existing ID and adds +1.
         
         Parameters: 
         habits (list): The list of current habits. 
@@ -231,10 +236,12 @@ class Habit:
     @staticmethod
     def enter_name(): 
         """ 
-        Prompts the user to enter the name of the habit. 
+        Prompts the user to enter the name of the habit with max. 30 characters.
         
         Returns: 
         str: The name of the habit. 
+
+        Used by: manage.add(), manage.duplicate() and manage.adjust()
         """
         max_length = 30
         while True: 
@@ -248,14 +255,16 @@ class Habit:
     @staticmethod
     def enter_category():
         """ 
-        Prompts the user to choose one out of four categories. 
+        Prompts the user to choose one out of four categories to asign a habit. 
         
         Returns: 
         str: The selected category.
+
+        Used by: manage.add() and manage.adjust()
         """
         category = questionary.select(
             "Which of these categories does your new habit belong to?",
-            choices=categories
+            choices=CATEGORIES
         ).ask()
         return category
 
@@ -266,21 +275,26 @@ class Habit:
         
         Returns: 
         int: The period mapped to its corresponding number of days.
+
+        Used by: manage.add() and manage.adjust()
         """
         period_word = questionary.select(
             "In which period you want to repeat your new habit?",
-            choices=periods
+            choices=PERIODS
         ).ask()
-        period = period_mapping[period_word]
+        period = PERIOD_MAPPING[period_word]
         return period
 
     @staticmethod
     def enter_valid_target():
         """ 
-        Prompts the user to enter a valid target number of repetitions for the habit. 
+        Prompts the user to enter a valid target number of repetitions for the habit.
+        Prevents an error caused by wrong input.
         
         Returns: 
         int: The target number of repetitions.
+
+        Used by: manage.add() and manage.adjust()
         """
         while True:
             try:
@@ -295,13 +309,17 @@ class Habit:
     @staticmethod
     def check_habits_exist(habits):
         """ 
-        Checks if there are any habits in the list. 
+        Checks if there are any habits in the list.
+        Prevents the methods which use this helper method 
+        from trying to work without a database, which would lead to errors.
         
         Parameters: 
         habits (list): The list of current habits. 
         
         Returns: 
         bool: True if no habits exist, False otherwise. 
+
+        Used by: manage.adjust(), manage.check(), manage.delete(), manage.duplicate(), diaplay.display_habits() and display.filter_habits()
         """
         if not habits:
             print(f"\nNo habits found. You can add new habits by using the “ADD“ function.")
@@ -311,7 +329,9 @@ class Habit:
     @staticmethod
     def check_id_exists(habits, occasion_name):
         """ 
-        Prompts the user to enter the ID of a habit and checks if it exists. 
+        Prompts the user to enter a valid existing ID and checks if 
+        the input was correct (positiv int) and if the entered ID exists. 
+        Prevents an error caused by wrong input.
         
         Parameters: 
         habits (list): The list of current habits. 
@@ -319,6 +339,8 @@ class Habit:
         
         Returns: 
         int: The habit ID if it exists, None otherwise. 
+
+        Used by: manage.adjust(), manage.check(), manage.delete() and manage.duplicate()
         """
         try:
             habit_id = int(questionary.text(f"\nPlease enter the ID of the habit you want to {occasion_name}:").ask())

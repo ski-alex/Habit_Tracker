@@ -1,10 +1,10 @@
 from datetime import datetime
+
 from tabulate import tabulate
 import questionary
 
 import display
 import manage
-from manage import period_mapping, periods
 
 class Analyse:
     """ 
@@ -68,20 +68,21 @@ class Analyse:
         """
         now = datetime.now().strftime("%Y-%m-%d")
 
-        for habit in habits: habit.deadline_date = datetime.strptime(habit.deadline, "%Y-%m-%d")
-
-        sorted_habits = sorted(habits, key=lambda habit: habit.deadline, reverse=False)
+        habit_deadline_dates = [(habit, datetime.strptime(habit.deadline, "%Y-%m-%d")) for habit in habits]
+        sorted_habits = sorted(habit_deadline_dates, key=lambda item: item[1], reverse=False)
         top_3_habits = sorted_habits[:3]
 
         table_data = []
-        for habit in top_3_habits:
-            if habit.deadline < now:
+        for habit, deadline_date in top_3_habits:
+            if habit.deadline < now and habit.status == "Broken":
                 table_data.append([habit.id, habit.name, habit.deadline, habit.status])
+
         if not table_data:
             print(f"\nNo results found for this filter.")
         else:
             print(f"\nHere are the top 3 of your habits that have not been worked on for the longest time:")
             print(tabulate(table_data, headers=["ID", "Name", "Deadline", "Status"], tablefmt="github"))
+
 
     @classmethod
     def get_group_habits_by_category(cls, habits):
@@ -91,7 +92,7 @@ class Analyse:
         Parameters: 
         habits (list): The list of habit objects to analyze. 
         """
-        all_categories = manage.categories
+        all_categories = manage.CATEGORIES
 
         category_count = {category: {'total': 0, 'active': 0, 'broken': 0, 'established': 0} for category in all_categories}
 
@@ -122,7 +123,7 @@ class Analyse:
         Parameters: 
         habits (list): The list of habit objects to analyze. 
         """
-        display.display_habits(habits, status_request = None,  length = "short", filter_period= [1,2,7])
+        display.display_habits(habits, status_request = None,  length = "short", filter_period= [1,2,7], headline = "")
         try:
             habit_id = int(questionary.text(f"\nPlease enter the ID of the habit you want to see:").ask())
         except ValueError:
@@ -139,7 +140,6 @@ class Analyse:
                 break
 
         table_data = [[habit.id, habit.name, habit.streak_max, habit.status]]
-        print()
         print(tabulate(table_data, headers=["ID", "Name", "Streak Max", "Status"], tablefmt="github"))
 
     @classmethod
@@ -150,12 +150,11 @@ class Analyse:
         Parameters: 
         habits (list): The list of habit objects to analyze. 
         """
-        period_word = questionary.select("Select the period for which you want to display habits:", choices = periods ).ask()
-        period = period_mapping[period_word]
+        period_word = questionary.select("Select the period for which you want to display habits:", choices = manage.PERIODS ).ask()
+        period = manage.PERIOD_MAPPING[period_word]
         
-        print(f"\nHere are all habits with a period of '{period_word}'.")
-
-        display.display_habits(habits, status_request = None, length = "short", filter_period = [period])
+        display.display_habits(habits, status_request = None, length = "short", filter_period = [period], 
+                               headline =f"\nHere are all habits with a period of '{period_word}'.")
     
     @staticmethod
     def choose_order():
