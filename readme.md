@@ -39,7 +39,8 @@ python main.py
 Navigation is exclusively via the Comand Line interface. The up and down arrow keys are mainly used for this purpose. To confirm a selection, use the enter button. If several options can be selected (indicated by the small circle in front of the options), these are first selected or deselected with the space bar and the final selection is confirmed with Enter.
 
 **Main Menu**
-Right after the start, the main menu is displayed.
+
+Right after the start, the main menu is displayed. If you already have tracked habits, all active and broken ones are shown, too.
 
 - **Quick Check:** Check the status of a specific habit.
 - **Add:** Add a new habit to track.
